@@ -34,7 +34,7 @@ project(BMS C CXX ASM)
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
-add_executable(BMS BMS.c)  # ← ΑΛΛΑΞΕ: BMS.c → main.c (ή όποιο όνομα έχει το αρχείο σου)
+add_executable(BMS BMS.c)  # 
 
 pico_set_program_name(BMS "BMS")
 pico_set_program_version(BMS "0.1")

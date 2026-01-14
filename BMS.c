@@ -313,7 +313,7 @@ static float vpin_to_current(float vpin) {
     return (vpin - I_ZERO_V) * I_SCALE;
 }
 
-// ---------- RMS CALCULATIONS ----------
+// ---------- RMS CALCULATIONS (check agaain) ----------
 
 static float read_cell_v_rms(void) {
     float sum_sq = 0.0f;
