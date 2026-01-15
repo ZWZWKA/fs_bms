@@ -119,4 +119,3 @@
 > **Τελικός Έλεγχος**
 >
 > Η αποδοχή του έργου προϋποθέτει 0 warnings κατά το compile (-Wall -Wextra) και επιτυχή ολοκλήρωση του unit testing για τις συνθήκες σφάλματος.
-[![Project Workflow](.doc/assets/Pipeline.png)](.doc/assets/Pipeline.png)
