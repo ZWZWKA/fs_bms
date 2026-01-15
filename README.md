@@ -56,7 +56,7 @@
 > * **Safety First:** Οποιοδήποτε σφάλμα κατά τη διάρκεια των καταστάσεων STANDBY ή RUN οδηγεί ακαριαία στην κατάσταση **FAULT**.
 > * **Latching Fault:** Στην κατάσταση FAULT, το σύστημα "κλειδώνει" την έξοδο ασφαλείας. Η έξοδος από αυτή την κατάσταση απαιτεί φυσικό Reset (Hard Reset), εμποδίζοντας την αυτόματη επανεκκίνηση του μονοθεσίου μετά από κρίσιμο σφάλμα.
 
-[![FSM Diagram](.doc\assets\FSM-Diagram.png)](.doc/assets/FSM-Diagram.png)
+[![FSM Diagram](.doc/assets/FSM-Diagram.png)](.doc/assets/FSM-Diagram.png)
 
 
 ## 5. Ανάλυση Αστοχιών (FMEA)
@@ -119,3 +119,4 @@
 > **Τελικός Έλεγχος**
 >
 > Η αποδοχή του έργου προϋποθέτει 0 warnings κατά το compile (-Wall -Wextra) και επιτυχή ολοκλήρωση του unit testing για τις συνθήκες σφάλματος.
+[![Project Workflow](.doc/assets/Pipeline.png)](.doc/assets/Pipeline.png)
