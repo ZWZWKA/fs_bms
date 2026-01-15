@@ -305,6 +305,10 @@ static float vpin_to_vcell(float vpin) {
     return (vpin * (R_TOP + R_BOTTOM) / R_BOTTOM * cal_factor) + voltage_offset;
 }
 
+static float vpin_to_vcell(float vpin) {
+    return vpin * R_div_calibrated + voltage_offset;
+}
+
 static float vpin_to_pack_v(float vpin) {
     return vpin * (R_TOP + R_BOTTOM) / R_BOTTOM;
 }

@@ -1,0 +1,23 @@
+/* Custom styles for markdown-extended PDF export with Mermaid support */
+
+@page {
+    margin: 2cm;
+}
+
+/* Ensure Mermaid diagrams are visible */
+.mermaid {
+    display: block;
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* Pre-formatted code should not apply to Mermaid */
+pre.mermaid {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+code.language-mermaid {
+    display: block;
+}
