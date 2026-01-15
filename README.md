@@ -7,8 +7,10 @@
 ## 1. Εισαγωγή & Σκοπός
 Το παρόν έγγραφο ορίζει τις προδιαγραφές για την ανάπτυξη του firmware του κεντρικού BMS (Master) για το ηλεκτροκίνητο μονοθέσιο. Το σύστημα βασίζεται στον **RP2350** και αποτελεί το κρισιμότερο επίπεδο ασφαλείας της μπαταρίας. 
 
-!!! danger "Κρισιμότητα Συστήματος"
-    Ο κώδικας πρέπει να είναι "αλεξίσφαιρος" (bulletproof), ντετερμινιστικός και να ακολουθεί αυστηρά το **[JPL Institutional Coding Standard](https://yurichev.com/mirrors/C/JPL_Coding_Standard_C.pdf)**. Κάθε αστοχία μπορεί να θέσει σε κίνδυνο την ακεραιότητα της μπαταρίας και του οδηγού.
+> [!CAUTION]
+> **Κρισιμότητα Συστήματος**
+>
+> Ο κώδικας πρέπει να είναι "αλεξίσφαιρος" (bulletproof), ντετερμινιστικός και να ακολουθεί αυστηρά το **[JPL Institutional Coding Standard](https://yurichev.com/mirrors/C/JPL_Coding_Standard_C.pdf)**. Κάθε αστοχία μπορεί να θέσει σε κίνδυνο την ακεραιότητα της μπαταρίας και του οδηγού.
 
 ---
 
@@ -29,13 +31,17 @@
 * **Ping-Pong Buffering:** Το DMA θα γράφει στον Buffer A, ενώ η CPU θα επεξεργάζεται τον Buffer B. 
 * **Alignment:** Όλοι οι buffers πρέπει να είναι ευθυγραμμισμένοι (aligned) στη μνήμη για μέγιστη ταχύτητα μεταφοράς.
 
-!!! info "Περιορισμός Μνήμης"
-    **Static Allocation:** Απαγορεύεται αυστηρά η χρήση `malloc`. Όλη η μνήμη πρέπει να δεσμευτεί στατικά κατά το compile time, σύμφωνα με το JPL Rule #3.
+> [!NOTE]
+> **Περιορισμός Μνήμης**
+>
+> **Static Allocation:** Απαγορεύεται αυστηρά η χρήση `malloc`. Όλη η μνήμη πρέπει να δεσμευτεί στατικά κατά το compile time, σύμφωνα με το JPL Rule #3.
 
 ### Β. Memory Mapping & Dual-Core Utilization
 Ο RP2350 διαθέτει δύο πυρήνες. Προτείνεται ο εξής διαχωρισμός:
 * **Core 0:** Low-level drivers (ADC, DMA, I2C, Interrupts).
 * **Core 1:** Data processing (Error checking, Filtering, SOC calculation) και CAN Bus Stack.
+
+[![Project Workflow](.doc/assets/Pipeline.png)](.doc/assets/Pipeline.png)
 
 ---
 
@@ -43,25 +49,29 @@
 
 Η χρήση μιας Πεπερασμένης Κατάστασης Μηχανής (FSM) είναι επιβεβλημένη για τη διασφάλιση του **ντετερμινισμού**. Το σύστημα δεν επιτρέπεται να βρίσκεται σε άγνωστη κατάσταση.
 
-!!! quote "Λειτουργία FSM"
-    * **Deterministic Transitions:** Κάθε μετάβαση (transition) πρέπει να πυροδοτείται από ένα συγκεκριμένο γεγονός (π.χ. Interrupt, CAN message).
-    * **Safety First:** Οποιοδήποτε σφάλμα κατά τη διάρκεια των καταστάσεων STANDBY ή RUN οδηγεί ακαριαία στην κατάσταση **FAULT**.
-    * **Latching Fault:** Στην κατάσταση FAULT, το σύστημα "κλειδώνει" την έξοδο ασφαλείας. Η έξοδος από αυτή την κατάσταση απαιτεί φυσικό Reset (Hard Reset), εμποδίζοντας την αυτόματη επανεκκίνηση του μονοθεσίου μετά από κρίσιμο σφάλμα.
+> [!IMPORTANT]
+> **Λειτουργία FSM**
+>
+> * **Deterministic Transitions:** Κάθε μετάβαση (transition) πρέπει να πυροδοτείται από ένα συγκεκριμένο γεγονός (π.χ. Interrupt, CAN message).
+> * **Safety First:** Οποιοδήποτε σφάλμα κατά τη διάρκεια των καταστάσεων STANDBY ή RUN οδηγεί ακαριαία στην κατάσταση **FAULT**.
+> * **Latching Fault:** Στην κατάσταση FAULT, το σύστημα "κλειδώνει" την έξοδο ασφαλείας. Η έξοδος από αυτή την κατάσταση απαιτεί φυσικό Reset (Hard Reset), εμποδίζοντας την αυτόματη επανεκκίνηση του μονοθεσίου μετά από κρίσιμο σφάλμα.
 
 [![FSM Diagram](.doc\assets\FSM-Diagram.png)](.doc/assets/FSM-Diagram.png)
 
 
 ## 5. Ανάλυση Αστοχιών (FMEA)
 
-!!! bug "Πρόβλεψη Σφαλμάτων" 
-    Ο προγραμματιστής οφείλει να υλοποιήσει τους παρακάτω μηχανισμούς ανίχνευσης:
-
-    | Πιθανή Αστοχία   | Επίπτωση                                                             | Μηχανισμός Πρόληψης / Ανίχνευσης                                                            |
-    | ---------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-    | I2C Bus Lock-up  | Loss of Monitoring (Critical). Αδυναμία ελέγχου τάσεων/θερμοκρασιών. | Hardware Watchdog & Bus Reset. Αν αποτύχει η επαναφορά εντός <50ms -> Immediate FAULT.      |
-    | DMA Overrun      | Data Corruption / Λανθασμένη λήψη απόφασης ασφαλείας.                | Χρήση Double Buffering & DMA Interrupt Monitoring.                                          |
-    | ADC Noise Spikes | False Trip (Άσκοπη διακοπή λειτουργίας).                             | Digital Filtering & Time-based validation (π.χ. σφάλμα αν η τιμή επιμένει για >3 δείγματα). |
-    | CPU Hang         | Πλήρης απώλεια προστασίας μπαταρίας.                                 | Independent Hardware Watchdog (WDT).                                                        |
+> [!WARNING]
+> **Πρόβλεψη Σφαλμάτων**
+>
+> Ο προγραμματιστής οφείλει να υλοποιήσει τους παρακάτω μηχανισμούς ανίχνευσης:
+>
+> | Πιθανή Αστοχία   | Επίπτωση                                                             | Μηχανισμός Πρόληψης / Ανίχνευσης                                                            |
+> | ---------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+> | I2C Bus Lock-up  | Loss of Monitoring (Critical). Αδυναμία ελέγχου τάσεων/θερμοκρασιών. | Hardware Watchdog & Bus Reset. Αν αποτύχει η επαναφορά εντός <50ms -> Immediate FAULT.      |
+> | DMA Overrun      | Data Corruption / Λανθασμένη λήψη απόφασης ασφαλείας.                | Χρήση Double Buffering & DMA Interrupt Monitoring.                                          |
+> | ADC Noise Spikes | False Trip (Άσκοπη διακοπή λειτουργίας).                             | Digital Filtering & Time-based validation (π.χ. σφάλμα αν η τιμή επιμένει για >3 δείγματα). |
+> | CPU Hang         | Πλήρης απώλεια προστασίας μπαταρίας.                                 | Independent Hardware Watchdog (WDT).                                                        |
 
 ## 6. Παραδοτέα
 
@@ -85,25 +95,27 @@
 
 ## 7. Unit Testing & Validation Strategy
 
-!!! info "Validation Requirement"
-    Ο προγραμματιστής οφείλει να αποδείξει την ορθότητα του κώδικα μέσω των παρακάτω δοκιμών:
-    
-  ### Χρονική Ανάλυση (Timing Analysis)
-  - Block Timing: Χρήση παλμογράφου ή Logic Analyzer σε ένα GPIO (Toggle Pin) για να επιβεβαιωθεί ότι το DMA Interrupt συμβαίνει ακριβώς κάθε 22ms ($\pm 1\%$).
-  - Processing Latency: Μέτρηση του χρόνου που χρειάζεται ο Core 0 για το memcpy και το validation. Ο χρόνος αυτός πρέπει να είναι < 2ms για να μην καθυστερεί η επόμενη δειγματοληψία.
-  - CAN Transmission: Επιβεβαίωση ότι τα πακέτα CAN φεύγουν με το σωστό ρυθμό και δεν συσσωρεύονται στο transmit buffer.
-  ### Προσομοίωση Σφαλμάτων (Fault Injection)
-  Πρέπει να ελεγχθεί η μετάβαση στο FAULT STATE για τις εξής περιπτώσεις:
-  - Broken Cable: Αποσύνδεση του καλωδίου κατά τη διάρκεια του RUN mode.
-  - I2C Timeout: Τεχνητή εισαγωγή καθυστέρησης (delay) στον driver του I2C για να προκληθεί timeout.
-  - Out-of-bounds: Παροχή τάσης > 4.2V ή < 2.5V (μέσω DC Power Supply ή εξομοιωτή) σε ένα κανάλι ADC.
-  - JPL Compliance Check: Static Analysis: Χρήση εργαλείων όπως το cppcheck ή το Clang Static Analyzer για τον εντοπισμό παραβιάσεων των κανόνων της JPL (π.χ. recursion, dynamic memory).
-  - Stack Usage: Μέτρηση του μέγιστου stack depth για να διασφαλιστεί ότι δεν υπάρχει κίνδυνος stack overflow στον RP2350.
+> [!NOTE]
+> **Validation Requirement**
+>
+> Ο προγραμματιστής οφείλει να αποδείξει την ορθότητα του κώδικα μέσω των παρακάτω δοκιμών:
+
+### Χρονική Ανάλυση (Timing Analysis)
+- Block Timing: Χρήση παλμογράφου ή Logic Analyzer σε ένα GPIO (Toggle Pin) για να επιβεβαιωθεί ότι το DMA Interrupt συμβαίνει ακριβώς κάθε 22ms ($\pm 1\%$).
+- Processing Latency: Μέτρηση του χρόνου που χρειάζεται ο Core 0 για το memcpy και το validation. Ο χρόνος αυτός πρέπει να είναι < 2ms για να μην καθυστερεί η επόμενη δειγματοληψία.
+- CAN Transmission: Επιβεβαίωση ότι τα πακέτα CAN φεύγουν με το σωστό ρυθμό και δεν συσσωρεύονται στο transmit buffer.
+
+### Προσομοίωση Σφαλμάτων (Fault Injection)
+Πρέπει να ελεγχθεί η μετάβαση στο FAULT STATE για τις εξής περιπτώσεις:
+- Broken Cable: Αποσύνδεση του καλωδίου κατά τη διάρκεια του RUN mode.
+- I2C Timeout: Τεχνητή εισαγωγή καθυστέρησης (delay) στον driver του I2C για να προκληθεί timeout.
+- Out-of-bounds: Παροχή τάσης > 4.2V ή < 2.5V (μέσω DC Power Supply ή εξομοιωτή) σε ένα κανάλι ADC.
+- JPL Compliance Check: Static Analysis: Χρήση εργαλείων όπως το cppcheck ή το Clang Static Analyzer για τον εντοπισμό παραβιάσεων των κανόνων της JPL (π.χ. recursion, dynamic memory).
+- Stack Usage: Μέτρηση του μέγιστου stack depth για να διασφαλιστεί ότι δεν υπάρχει κίνδυνος stack overflow στον RP2350.
 
 ---
 
-!!! success "Τελικός Έλεγχος"
-
-    Η αποδοχή του έργου προϋποθέτει 0 warnings κατά το compile (-Wall -Wextra) και επιτυχή ολοκλήρωση του unit testing για τις συνθήκες σφάλματος.
-
-[![Project Workflow](.doc/assets/Pipeline.png)](.doc/assets/Pipeline.png)
+> [!TIP]
+> **Τελικός Έλεγχος**
+>
+> Η αποδοχή του έργου προϋποθέτει 0 warnings κατά το compile (-Wall -Wextra) και επιτυχή ολοκλήρωση του unit testing για τις συνθήκες σφάλματος.
