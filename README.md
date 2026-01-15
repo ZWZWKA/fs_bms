@@ -18,7 +18,8 @@
 * **External Interface:** Σύνδεση με την Main ECU μέσω CAN Bus για αποστολή τηλεμετρίας.
 * **Safety Loop:** Broken Cable Detection (Digital Input) που διατρέχει όλα τα modules και επιστρέφει στο Master.
 
----
+
+<div style="page-break-after: always;"></div>
 
 ## 3. Τεχνικές Προδιαγραφές & Διαχείριση Μνήμης
 
@@ -47,16 +48,8 @@
     * **Safety First:** Οποιοδήποτε σφάλμα κατά τη διάρκεια των καταστάσεων STANDBY ή RUN οδηγεί ακαριαία στην κατάσταση **FAULT**.
     * **Latching Fault:** Στην κατάσταση FAULT, το σύστημα "κλειδώνει" την έξοδο ασφαλείας. Η έξοδος από αυτή την κατάσταση απαιτεί φυσικό Reset (Hard Reset), εμποδίζοντας την αυτόματη επανεκκίνηση του μονοθεσίου μετά από κρίσιμο σφάλμα.
 
-```mermaid
-stateDiagram-v2
-    [*] --> INIT
-    INIT --> STANDBY : Self-Test Success
-    INIT --> FAULT : Hardware Error
-    STANDBY --> RUN : CAN Enable Signal
-    STANDBY --> FAULT : Broken Cable / Overvoltage
-    RUN --> FAULT : Broken Cable / Limit Exceeded / I2C Lock-up / WDT
-    FAULT --> [*] : Hard Reset Required
-```
+[![FSM Diagram](.doc\assets\FSM-Diagram.png)](.doc/assets/FSM-Diagram.png)
+
 
 ## 5. Ανάλυση Αστοχιών (FMEA)
 
@@ -88,7 +81,10 @@ stateDiagram-v2
   - **Plausibility Checks**: Σύγκριση της συνολικής τάσης του pack (από το Main ADC) με το άθροισμα των τάσεων των κελιών (από τα SBMS) για την ανίχνευση σφαλμάτων μέτρησης.
   - **Isolation Monitoring Interface**: Ανάγνωση δεδομένων από το IMD (Isolation Monitoring Device) για την ανίχνευση διαρροών προς το σασί.
 
-## 7. Unit Testing & Validation Strategy!!! 
+---
+
+## 7. Unit Testing & Validation Strategy
+
 !!! info "Validation Requirement"
     Ο προγραμματιστής οφείλει να αποδείξει την ορθότητα του κώδικα μέσω των παρακάτω δοκιμών:
     
@@ -110,31 +106,4 @@ stateDiagram-v2
 
     Η αποδοχή του έργου προϋποθέτει 0 warnings κατά το compile (-Wall -Wextra) και επιτυχή ολοκλήρωση του unit testing για τις συνθήκες σφάλματος.
 
-
-```mermaid
-graph TD
-    subgraph "Hardware Layer (RP2350)"
-        A[ADC Channels 1-3] -->|Continuous Sampling 10kHz| B[ADC FIFO]
-        B -->|DMA Request| C{DMA Controller}
-    end
-
-    subgraph "Memory Layer (SRAM / Scratchpad)"
-        C -->|Transfer| D[Buffer A - 440B]
-        C -->|Transfer| E[Buffer B - 440B]
-        D -.->|Every 22ms| F((DMA Interrupt))
-        E -.->|Every 22ms| F
-    end
-
-    subgraph "Processing & Safety (Core 0 & Core 1)"
-        F -->|CPU Wakeup| G[Memcpy to Work Buffer]
-        G -->|Check Limits| H{Validation}
-        H -->|If Error| J[FAULT STATE]
-        H -->|If OK| K[CAN Bus Telemetry - 22ms Block]
-        K --> I[Long-term Circular Buffer 1s]
-    end
-
-    subgraph "High Level Analysis"
-        I -->|Background Processing| L[SOC/SOH/Kalman Algorithms]
-        I -->|Thermal Logic| M[Thermal Throttling]
-    end
-```
+[![Project Workflow](.doc/assets/Pipeline.png)](.doc/assets/Pipeline.png)
